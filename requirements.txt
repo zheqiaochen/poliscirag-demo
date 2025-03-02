@@ -1,0 +1,15 @@
+tiktoken
+requests
+uuid
+qdrant-client
+tqdm
+google-generativeai
+python-dotenv
+python-multipart
+voyageai
+openai
+fastapi
+uvicorn
+python-multipart
+jinja2
+fastprogress

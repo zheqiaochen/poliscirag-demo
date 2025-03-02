@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>PoliSciRAG</title>
+    <!-- 添加favicon -->
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        neutral: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: '#6b7280',
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            900: '#111827',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- 添加动画效果库 -->
+    <style>
+        .typing-animation {
+            overflow: hidden;
+            border-right: .15em solid #4B5563;
+            white-space: nowrap;
+            animation: typing 1s steps(40, end), blink-caret .75s step-end infinite;
+        }
+        
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #4B5563 }
+        }
+        
+        /* 添加动态省略号动画 */
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0 }
+            100% { background-position: -200% 0 }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.5s ease-in-out;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* 添加新的动画效果 */
+        .slide-down {
+            animation: slideDown 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .expand {
+            animation: expand 0.5s ease-in-out;
+        }
+        
+        @keyframes expand {
+            from { max-height: 0; opacity: 0; }
+            to { max-height: 800px; opacity: 1; }
+        }
+        
+        /* 添加Markdown样式 */
+        .markdown-content h1 { font-size: 1.8em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
+        .markdown-content h2 { font-size: 1.5em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
+        .markdown-content h3 { font-size: 1.3em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
+        .markdown-content h4 { font-size: 1.2em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
+        .markdown-content p { margin-bottom: 0.75em; }
+        .markdown-content ul, .markdown-content ol { margin-left: 1.5em; margin-bottom: 1em; }
+        .markdown-content li { margin-bottom: 0.25em; }
+        .markdown-content blockquote { border-left: 4px solid #e5e7eb; padding-left: 1em; margin-left: 0; margin-right: 0; font-style: italic; }
+        .markdown-content code { background-color: #f3f4f6; padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; }
+        .markdown-content pre { background-color: #f3f4f6; padding: 1em; border-radius: 5px; overflow-x: auto; margin-bottom: 1em; }
+        .markdown-content pre code { background-color: transparent; padding: 0; }
+        .markdown-content a { color: #6d6d6d; text-decoration: underline; }
+        .markdown-content table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+        .markdown-content th, .markdown-content td { border: 1px solid #d1d5db; padding: 0.5em; }
+        .markdown-content th { background-color: #f3f4f6; }
+    </style>
+    
+    <!-- 添加Markdown解析库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="pt-20 bg-neutral-50 text-neutral-800 font-sans h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
+      <div class="container mx-auto px-4 max-w-6xl">
+        <div class="h-16 flex items-center justify-between">
+          <a class="text-neutral-800 font-semibold text-lg" href="/">PoliSciRAG</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container mx-auto px-4 flex-grow flex flex-col max-w-6xl">
+        <!-- 隐藏标题但保留元素，用于JS定位 -->
+        <h2 class="sr-only" id="page-title">PoliSciRAG Query</h2>
+        
+        <!-- 聊天内容区域 - 初始隐藏，有内容时显示 -->
+        {% if query_answer %}
+        <div class="flex-grow overflow-auto mb-6 rounded-xl bg-white shadow-sm fade-in max-w-5xl mx-auto w-full" id="chat-container-wrapper">
+            <div class="p-6 space-y-6 min-h-[400px]" id="chat-container">
+                <!-- 用户问题 -->
+                <div class="flex justify-end mb-4">
+                    <div class="bg-neutral-100 rounded-lg py-3 px-4 max-w-[80%]">
+                        <p class="text-neutral-800">{{ query }}</p>
+                    </div>
+                </div>
+                
+                <!-- 系统回答 -->
+                <div class="flex justify-start mb-4">
+                    <div class="bg-neutral-200 rounded-lg py-3 px-4 max-w-[80%]">
+                        <div class="text-neutral-800 markdown-content" id="answer-content">{{ query_answer }}</div>
+                    </div>
+                </div>
+                
+                <!-- 检索到的文档显示区域 -->
+                {% if documents %}
+                <div class="mt-6">
+                    <h5 class="font-medium mb-3 text-neutral-700">Related Documents:</h5>
+                    <div class="space-y-3">
+                        {% for doc in documents %}
+                        <div class="border border-neutral-200 rounded-lg overflow-hidden">
+                            <div class="bg-neutral-100 px-4 py-2 font-medium border-b border-neutral-200">Document #{{ loop.index }}</div>
+                            <div>
+                                <pre class="whitespace-pre-wrap text-sm p-4 bg-white max-h-60 overflow-y-auto">{{ doc }}</pre>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <!-- 当没有查询结果时，添加一个占位符div来实现垂直居中 -->
+        <div class="flex-grow flex items-center justify-center">
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6 max-w-3xl w-full mx-auto">
+                <div class="p-6">
+                    <form action="/query" method="get" id="query-form">
+                        <!-- 查询输入区域和提交按钮 -->
+                        <div class="mb-4">
+                            <label for="query" class="block text-sm font-medium text-neutral-700 mb-2">Query Input:</label>
+                            <div class="flex items-center">
+                                <textarea class="w-[85%] px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 overflow-auto max-h-[25dvh] max-h-52" id="query" name="query" required autocomplete="off" placeholder="Ask me anything"></textarea>
+                                <div class="flex-1 flex justify-end pr-4">
+                                    <button type="submit" class="bg-neutral-600 hover:bg-neutral-700 text-white font-medium p-3 rounded-full transition duration-150 ease-in-out flex items-center justify-center" id="submit-btn">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 其他选项区域 -->
+                        <div class="grid grid-cols-6 gap-4">
+                            <div class="col-span-3">
+                                <label for="collection_name_query" class="block text-sm font-medium text-neutral-700 mb-2">Collection:</label>
+                                <select class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="collection_name_query" name="collection_name" required>
+                                    {% if collection_names %}
+                                        {% for name in collection_names %}
+                                            <option value="{{ name }}">{{ name }}</option>
+                                        {% endfor %}
+                                    {% else %}
+                                        <option value="" disabled selected>no collection</option>
+                                    {% endif %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-span-1">
+                                <label for="metadata_query" class="block text-sm font-medium text-neutral-700 mb-2">Metadata:</label>
+                                <input type="text" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="metadata_query" name="metadata" autocomplete="off" placeholder="Optional">
+                            </div>
+                            
+                            <div class="col-span-1">
+                                <label for="top_k" class="block text-sm font-medium text-neutral-700 mb-2">Search top-k:</label>
+                                <input type="number" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="top_k" name="top_k" value="10" min="1" max="50">
+                            </div>
+                            
+                            <div class="col-span-1">
+                                <label for="rerank_top_k" class="block text-sm font-medium text-neutral-700 mb-2">Rerank top-k:</label>
+                                <input type="number" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="rerank_top_k" name="rerank_top_k" value="5" min="1" max="20">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 查询输入区域 - 仅在有内容时显示在底部 -->
+        {% if query_answer %}
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6 slide-up max-w-5xl mx-auto w-full">
+            <div class="p-6">
+                <form action="/query" method="get" id="query-form">
+                    <!-- 查询输入区域和提交按钮 -->
+                    <div class="mb-4">
+                        <label for="query" class="block text-sm font-medium text-neutral-700 mb-2">Query Input:</label>
+                        <div class="flex items-center">
+                            <textarea class="w-[85%] px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 overflow-auto max-h-[25dvh] max-h-52" id="query" name="query" required autocomplete="off" placeholder="Ask me anything"></textarea>
+                            <div class="flex-1 flex justify-end pr-9">
+                                <button type="submit" class="bg-neutral-600 hover:bg-neutral-700 text-white font-medium p-3 rounded-full transition duration-150 ease-in-out flex items-center justify-center" id="submit-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 其他选项区域 -->
+                    <div class="grid grid-cols-6 gap-4">
+                        <div class="col-span-3">
+                            <label for="collection_name_query" class="block text-sm font-medium text-neutral-700 mb-2">Collection:</label>
+                            <select class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="collection_name_query" name="collection_name" required>
+                                {% if collection_names %}
+                                    {% for name in collection_names %}
+                                        <option value="{{ name }}">{{ name }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="" disabled selected>no collection</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-span-1">
+                            <label for="metadata_query" class="block text-sm font-medium text-neutral-700 mb-2">Metadata (Optional):</label>
+                            <input type="text" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="metadata_query" name="metadata" autocomplete="off" placeholder="Optional">
+                        </div>
+                        
+                        <div class="col-span-1">
+                            <label for="top_k" class="block text-sm font-medium text-neutral-700 mb-2">Search top-k:</label>
+                            <input type="number" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="top_k" name="top_k" value="10" min="1" max="50">
+                        </div>
+                        
+                        <div class="col-span-1">
+                            <label for="rerank_top_k" class="block text-sm font-medium text-neutral-700 mb-2">Rerank top-k:</label>
+                            <input type="number" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="rerank_top_k" name="rerank_top_k" value="5" min="1" max="20">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <footer class="mt-auto pt-4 border-t border-neutral-100">
+        <div class="container mx-auto px-4 py-2">
+            <p class="text-center text-neutral-400 text-xs">© 2025 PoliSciRAG | All Rights Reserved</p>
+        </div>
+    </footer>
+
+    <!-- 添加JavaScript实现动态加载效果 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 解析markdown内容
+            const answerContent = document.getElementById('answer-content');
+            if (answerContent && answerContent.textContent.trim()) {
+                answerContent.innerHTML = marked.parse(answerContent.textContent);
+            }
+            
+            const form = document.getElementById('query-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const queryInput = document.getElementById('query');
+            
+            // 添加回车提交，Shift+回车换行的功能
+            queryInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    // 如果按下Shift键，则允许换行
+                    if (e.shiftKey) {
+                        return; // 默认行为是插入换行符
+                    } else {
+                        // 阻止默认的回车行为
+                        e.preventDefault();
+                        // 触发表单提交
+                        if (queryInput.value.trim() !== '') {
+                            form.dispatchEvent(new Event('submit'));
+                        }
+                    }
+                }
+            });
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // 获取查询内容
+                const query = queryInput.value.trim();
+                
+                // 如果查询为空，不执行提交
+                if (query === '') {
+                    return;
+                }
+                
+                // 创建聊天容器（如果不存在）
+                let chatContainerWrapper = document.getElementById('chat-container-wrapper');
+                if (!chatContainerWrapper) {
+                    chatContainerWrapper = document.createElement('div');
+                    chatContainerWrapper.id = 'chat-container-wrapper';
+                    chatContainerWrapper.className = 'flex-grow overflow-auto mb-6 rounded-xl bg-white shadow-sm expand max-w-5xl mx-auto w-full';
+                    
+                    const chatContainer = document.createElement('div');
+                    chatContainer.id = 'chat-container';
+                    chatContainer.className = 'p-6 space-y-6 min-h-[400px]';
+                    chatContainerWrapper.appendChild(chatContainer);
+                    
+                    // 插入到标题后面
+                    const title = document.getElementById('page-title');
+                    title.parentNode.insertBefore(chatContainerWrapper, title.nextSibling);
+                }
+                
+                const chatContainer = document.getElementById('chat-container');
+                
+                // 显示用户问题
+                const userMessage = document.createElement('div');
+                userMessage.className = 'flex justify-end mb-4 fade-in';
+                userMessage.innerHTML = `
+                    <div class="bg-neutral-100 rounded-lg py-3 px-4 max-w-[80%]">
+                        <p class="text-neutral-800">${query}</p>
+                    </div>
+                `;
+                chatContainer.appendChild(userMessage);
+                
+                // 显示加载中的动态省略号，替换原来的骨架屏
+                const loadingMessage = document.createElement('div');
+                loadingMessage.className = 'flex justify-start mb-4 fade-in';
+                loadingMessage.innerHTML = `
+                    <div class="bg-neutral-200 rounded-lg py-3 px-4">
+                        <div class="text-neutral-700 font-medium loading-dots">Thinking</div>
+                    </div>
+                `;
+                chatContainer.appendChild(loadingMessage);
+                
+                // 滚动到底部
+                chatContainerWrapper.scrollTop = chatContainerWrapper.scrollHeight;
+                
+                // 移动输入框到底部（添加动画类）
+                const inputContainer = form.closest('.bg-white');
+                inputContainer.classList.remove('slide-up');
+                inputContainer.classList.add('slide-down');
+                inputContainer.classList.remove('my-auto', 'mx-auto');
+                
+                // 确保输入框宽度与聊天区域一致
+                if (inputContainer.classList.contains('max-w-3xl')) {
+                    inputContainer.classList.remove('max-w-3xl');
+                    inputContainer.classList.add('max-w-5xl');
+                }
+                
+                // 禁用提交按钮
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+                
+                // 提交表单
+                const formData = new FormData(form);
+                const queryParams = new URLSearchParams(formData);
+                
+                // 创建系统回答的容器，但先不填充内容
+                const messageId = `message-${Date.now()}`;
+                const systemMessage = document.createElement('div');
+                systemMessage.className = 'flex justify-start mb-4 fade-in';
+                systemMessage.innerHTML = `
+                    <div class="bg-neutral-200 rounded-lg py-3 px-4 max-w-[80%]">
+                        <div class="text-neutral-800 markdown-content" id="${messageId}"></div>
+                    </div>
+                `;
+                
+                // 使用EventSource进行SSE连接
+                const eventSource = new EventSource(`/stream_query?${queryParams.toString()}`);
+                
+                // 文档数组，用于存储相关文档
+                let documents = [];
+                let fullAnswer = '';
+                
+                eventSource.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.error) {
+                            // 处理错误
+                            systemMessage.querySelector('.markdown-content').innerHTML = marked.parse(`**错误:** ${data.error}`);
+                            chatContainer.appendChild(systemMessage);
+                            eventSource.close();
+                            return;
+                        }
+                        
+                        // 移除加载动态省略号（如果存在）
+                        if (loadingMessage && loadingMessage.parentNode) {
+                            chatContainer.removeChild(loadingMessage);
+                        }
+                        
+                        // 确保系统消息已添加到聊天容器
+                        if (!systemMessage.parentNode) {
+                            chatContainer.appendChild(systemMessage);
+                        }
+                        
+                        if (data.type === "documents") {
+                            // 存储文档数据，但暂不显示
+                            documents = data.data;
+                        } else if (data.type === "text") {
+                            // 追加文本内容
+                            fullAnswer += data.data;
+                            systemMessage.querySelector('.markdown-content').innerHTML = marked.parse(fullAnswer);
+                            
+                            // 滚动到底部
+                            chatContainerWrapper.scrollTop = chatContainerWrapper.scrollHeight;
+                        } else if (data.type === "end") {
+                            // 处理结束事件
+                            eventSource.close();
+                            
+                            // 显示文档内容
+                            if (documents && documents.length > 0) {
+                                const docsContainer = document.createElement('div');
+                                docsContainer.className = 'mt-6';
+                                
+                                let docsHTML = `<h5 class="font-medium mb-3 text-neutral-700">相关文档:</h5><div class="space-y-3">`;
+                                
+                                documents.forEach((docContent, index) => {
+                                    docsHTML += `
+                                        <div class="border border-neutral-200 rounded-lg overflow-hidden">
+                                            <div class="bg-neutral-100 px-4 py-2 font-medium border-b border-neutral-200">文档 #${index + 1}</div>
+                                            <div>
+                                                <pre class="whitespace-pre-wrap text-sm p-4 bg-white max-h-60 overflow-y-auto">${docContent}</pre>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                
+                                docsHTML += `</div>`;
+                                docsContainer.innerHTML = docsHTML;
+                                chatContainer.appendChild(docsContainer);
+                            }
+                            
+                            // 清空输入框
+                            queryInput.value = '';
+                            
+                            // 恢复提交按钮
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>';
+                        }
+                    } catch (e) {
+                        console.error("解析事件数据出错:", e);
+                    }
+                };
+                
+                eventSource.onerror = function(error) {
+                    console.error("EventSource 错误:", error);
+                    eventSource.close();
+                    
+                    // 恢复提交按钮
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>';
+                };
+                
+                eventSource.onopen = function() {
+                    console.log("EventSource 连接已打开");
+                };
+            });
+        });
+    </script>
+</body>
+</html>
