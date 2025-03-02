@@ -18,7 +18,7 @@ dotenv.load_dotenv()
 
 # 初始化Qdrant客户端
 qdrant_client = QdrantClient(
-    url=os.getenv("QDRANT_URL"),
+    url="https://78ad3c0f-57d0-4401-8f8a-8823bfa3c6a7.us-east4-0.gcp.cloud.qdrant.io",
     api_key=os.getenv("QDRANT_API_KEY"),
     port=None,
 )
