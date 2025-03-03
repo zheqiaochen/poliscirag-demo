@@ -492,9 +492,24 @@
                 
                 eventSource.onerror = function(error) {
                     console.error("EventSource 错误:", error);
+                    
+                    // Add more detailed error handling
+                    if (!fullAnswer) {
+                        // No data received yet, show error message to user
+                        const errorMsg = "Connection error occurred. Please try again.";
+                        if (loadingMessage && loadingMessage.parentNode) {
+                            chatContainer.removeChild(loadingMessage);
+                        }
+                        
+                        systemMessage.querySelector('.markdown-content').innerHTML = marked.parse(`**Error:** ${errorMsg}`);
+                        if (!systemMessage.parentNode) {
+                            chatContainer.appendChild(systemMessage);
+                        }
+                    }
+                    
                     eventSource.close();
                     
-                    // 恢复提交按钮
+                    // Restore submit button
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>';
                 };

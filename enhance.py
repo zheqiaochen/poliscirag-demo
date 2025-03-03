@@ -13,8 +13,8 @@ dotenv.load_dotenv()
 
 # 初始化qwen客户端用于chat completions
 client = OpenAI(
-    api_key=os.getenv("DASHSCOPE_API_KEY"),  # Replace with your API key if not using env vars
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+    api_key=os.getenv("OPENAI_API_KEY"),  # Replace with your API key if not using env vars
+    base_url="https://api.openai.com/v1"
 )
 
 def extract_text_from_context(context: list) -> str:
@@ -75,7 +75,7 @@ def enhance_answer(query: str, context: str):
         f"请根据以上信息回答下面的问题：\n{query}\n回答："
     )
     response = client.chat.completions.create(
-        model="qwen-plus",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "你是一个会根据已知文本进行总结的专家，给出简洁的回答。"},
             {"role": "user", "content": prompt},
