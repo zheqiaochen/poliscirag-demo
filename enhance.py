@@ -75,7 +75,7 @@ def enhance_answer(query: str, context: str):
         f"请根据以上信息回答下面的问题：\n{query}\n回答："
     )
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": "你是一个会根据已知文本进行总结的专家，给出简洁的回答。"},
             {"role": "user", "content": prompt},
