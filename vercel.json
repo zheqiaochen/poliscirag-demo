@@ -1,5 +1,11 @@
 {
   "version": 2,
+  "functions": {
+    "main.py": {
+      "runtime": "@vercel/python",
+      "maxDuration": 120
+    }
+  },
   "builds": [
     {
       "src": "main.py",
@@ -12,4 +18,4 @@
       "dest": "main.py"
     }
   ]
-} 
+}
