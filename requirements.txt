@@ -4,6 +4,6 @@ python-dotenv
 python-multipart
 jinja2
 requests
-openai
+openai = 1.59.7
 qdrant-client
 voyageai
