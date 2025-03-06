@@ -52,61 +52,55 @@ def query_embedding(text: str) -> list:
     embedding_vector = result_json['data'][0]['embedding']
     return embedding_vector
 
-def search_qdrant_with_rerank(query: str, collection_name: str, metadatas=None, top_k: int = 10, rerank_top_k: int = 5) -> list:
-    """
-    使用Voyage reranker结果搜索Qdrant。
-
-    Args:
-        query (str): 用户查询
-        collection_name (str): Qdrant集合名称
-        metadatas (str or list, optional): 元数据过滤
-        top_k (int, optional): 需要检索的top结果数量
-        rerank_top_k (int, optional): 重新排序后返回的结果数量
-
-    Returns:
-        list: 重新排序的搜索结果
-    """
+def search_qdrant_with_rerank(query: str, collection_name: str, top_k: int = 10, rerank_top_k: int = 5) -> list:
     # 计算查询embedding
     query_emb = query_embedding(query)
 
-    # 根据提供的元数据构造过滤条件
-    query_filter = None
-    if metadatas:
-        if isinstance(metadatas, str):
-            metadatas = [metadatas]
-        query_filter = models.Filter(
-            must=[
-                models.FieldCondition(
-                    key="metadata",
-                    match=models.MatchValue(value=metadata)
-                )
-                for metadata in metadatas
-            ]
-        )
-
-    # 执行 Qdrant 查询，使用 query_points 方法，并传入 search_params
+    # 执行 Qdrant 查询
     results = qdrant_client.query_points(
         collection_name=collection_name,
         query=query_emb,
-        query_filter=query_filter,
         search_params=models.SearchParams(hnsw_ef=128, exact=False),
         limit=top_k,
     )
 
-    # 从查询结果中提取文档内容
+    # 从查询结果中提取文档内容和元数据
     documents = []
     for i in range(len(results.points)):
         content = results.points[i].payload.get('content', '')
-        if content and isinstance(content, str):  # 确保内容不为空且是字符串
-            documents.append(content)
-    
-    # 检查文档列表是否为空
-    if not documents:
-        return []  # 如果没有有效文档，返回空列表
+        title = results.points[i].payload.get('title', '未知标题')
+        author = results.points[i].payload.get('author', '未知作者')
         
-    # 使用Voyage reranker对结果进行重新排序，传入自定义的rerank_top_k
-    reranked_results = voyage_rerank(query, documents, top_k=rerank_top_k)
-    return reranked_results
+        if content:
+            documents.append({
+                'content': content,
+                'title': title,
+                'author': author
+            })
+
+    # 如果没有找到有效文档，则返回空列表
+    if not documents:
+        return []
+
+    # 使用Voyage reranker对结果进行重新排序
+    # 只传入内容进行重排序
+    contents_only = [doc['content'] for doc in documents]
+    reranked_indices = voyage_rerank(query, contents_only, top_k=rerank_top_k)
+
+    # 根据重排序结果重组带有元数据的文档
+    reranked_documents = []
+    for result in reranked_indices:
+        original_idx = result.index
+        if original_idx < len(documents):
+            reranked_documents.append({
+                'document': documents[original_idx]['content'],
+                'title': documents[original_idx]['title'],
+                'author': documents[original_idx]['author']
+                # 如果需要得分信息，可以改为使用正确的属性，例如:
+                # 'score': getattr(result, 'similarity', None)
+            })
+    return reranked_documents
+
 
 
 def jina_rerank(query: str, documents: list) -> list:
@@ -189,5 +183,5 @@ if __name__ == "__main__":
         metadata = sys.argv[3] if len(sys.argv) > 3 else None
         top_k = int(sys.argv[4]) if len(sys.argv) > 4 else 10
 
-        results = search_qdrant_with_rerank(query_text, collection, metadatas=metadata, top_k=top_k)
+        results = search_qdrant_with_rerank(query_text, collection, top_k=top_k)
         print(results)

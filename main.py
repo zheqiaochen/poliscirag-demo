@@ -64,12 +64,11 @@ async def query_document(
     request: Request,
     query: str,
     collection_name: str,
-    metadata: str = None,
     top_k: int = 10,
     rerank_top_k: int = 5
 ):
     """
-    根据用户输入的查询内容和collection（可选metadata）：
+    根据用户输入的查询内容和collection：
     1. 先调用Qdrant检索相关文档，组合为上下文；
     2. 再调用enhance_answer根据问题和上下文生成最终回答。
     """
@@ -78,7 +77,6 @@ async def query_document(
         results = search_qdrant_with_rerank(
             query, 
             collection_name, 
-            metadatas=metadata, 
             top_k=top_k,
             rerank_top_k=rerank_top_k
         )
@@ -93,13 +91,17 @@ async def query_document(
                 "documents": []
             })
             
-        # 提取文档内容，用于前端显示
+        # 提取文档内容和元数据，用于前端显示
         documents = []
-        for i in range(len(results)):
-            documents.append(results[i].document)
+        for result in results:
+            documents.append({
+                'content': result['document'],
+                'title': result['title'],
+                'author': result['author']
+            })
 
-        # 准备上下文文本
-        context_text = "\n\n".join(documents)
+        # 准备上下文文本（只使用内容部分）
+        context_text = "\n\n".join([doc['content'] for doc in documents])
 
         # 调用enhance_answer生成最终回答
         from enhance import enhance_answer
@@ -134,7 +136,6 @@ async def stream_query(
     request: Request,
     query: str,
     collection_name: str,
-    metadata: str = None,
     top_k: int = 10,
     rerank_top_k: int = 5
 ):
@@ -147,7 +148,6 @@ async def stream_query(
         results = search_qdrant_with_rerank(
             query, 
             collection_name, 
-            metadatas=metadata, 
             top_k=top_k,
             rerank_top_k=rerank_top_k
         )
@@ -160,13 +160,17 @@ async def stream_query(
                 media_type="text/event-stream"
             )
             
-        # 提取文档内容，用于前端显示
+        # 提取文档内容和元数据，用于前端显示
         documents = []
         for result in results:
-            documents.append(result.document)
+            documents.append({
+                'content': result['document'],
+                'title': result['title'],
+                'author': result['author']
+            })
         
-        # 准备上下文文本
-        context_text = "\n\n".join(documents)
+        # 准备上下文文本（只使用内容部分）
+        context_text = "\n\n".join([doc['content'] for doc in documents])
         
         # 添加日志
         print(f"找到 {len(results)} 个相关文档")

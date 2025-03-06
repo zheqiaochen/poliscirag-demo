@@ -163,21 +163,25 @@
                 </div>
                 
                 <!-- 检索到的文档显示区域 -->
+                <!-- 检索到的文档显示区域 -->
                 {% if documents %}
                 <div class="mt-6">
                     <h5 class="font-medium mb-3 text-neutral-700">Related Documents:</h5>
                     <div class="space-y-3">
                         {% for doc in documents %}
                         <div class="border border-neutral-200 rounded-lg overflow-hidden">
-                            <div class="bg-neutral-100 px-4 py-2 font-medium border-b border-neutral-200">Document #{{ loop.index }}</div>
+                            <div class="bg-neutral-100 px-4 py-2 font-medium border-b border-neutral-200">
+                                Document #{{ loop.index }} - {{ doc.title }}{% if doc.author %} (作者: {{ doc.author }}){% endif %}
+                            </div>
                             <div>
-                                <pre class="whitespace-pre-wrap text-sm p-4 bg-white max-h-60 overflow-y-auto">{{ doc }}</pre>
+                                <pre class="whitespace-pre-wrap text-sm p-4 bg-white max-h-60 overflow-y-auto">${doc.content}</pre>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
                 {% endif %}
+
             </div>
         </div>
         {% else %}
@@ -202,7 +206,7 @@
                         </div>
                         
                         <!-- 其他选项区域 -->
-                        <div class="grid grid-cols-6 gap-4">
+                        <div class="grid grid-cols-5 gap-4">
                             <div class="col-span-3">
                                 <label for="collection_name_query" class="block text-sm font-medium text-neutral-700 mb-2">Collection:</label>
                                 <select class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="collection_name_query" name="collection_name" required>
@@ -214,11 +218,6 @@
                                         <option value="" disabled selected>no collection</option>
                                     {% endif %}
                                 </select>
-                            </div>
-                            
-                            <div class="col-span-1">
-                                <label for="metadata_query" class="block text-sm font-medium text-neutral-700 mb-2">Metadata:</label>
-                                <input type="text" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="metadata_query" name="metadata" autocomplete="off" placeholder="Optional">
                             </div>
                             
                             <div class="col-span-1">
@@ -258,7 +257,7 @@
                     </div>
                     
                     <!-- 其他选项区域 -->
-                    <div class="grid grid-cols-6 gap-4">
+                    <div class="grid grid-cols-5 gap-4">
                         <div class="col-span-3">
                             <label for="collection_name_query" class="block text-sm font-medium text-neutral-700 mb-2">Collection:</label>
                             <select class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="collection_name_query" name="collection_name" required>
@@ -270,11 +269,6 @@
                                     <option value="" disabled selected>no collection</option>
                                 {% endif %}
                             </select>
-                        </div>
-                        
-                        <div class="col-span-1">
-                            <label for="metadata_query" class="block text-sm font-medium text-neutral-700 mb-2">Metadata (Optional):</label>
-                            <input type="text" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="metadata_query" name="metadata" autocomplete="off" placeholder="Optional">
                         </div>
                         
                         <div class="col-span-1">
@@ -460,14 +454,16 @@
                                 const docsContainer = document.createElement('div');
                                 docsContainer.className = 'mt-6';
                                 
-                                let docsHTML = `<h5 class="font-medium mb-3 text-neutral-700">相关文档:</h5><div class="space-y-3">`;
+                                let docsHTML = `<h5 class="font-medium mb-3 text-neutral-700">Related Documents:</h5><div class="space-y-3">`;
                                 
-                                documents.forEach((docContent, index) => {
+                                documents.forEach((doc, index) => {
                                     docsHTML += `
                                         <div class="border border-neutral-200 rounded-lg overflow-hidden">
-                                            <div class="bg-neutral-100 px-4 py-2 font-medium border-b border-neutral-200">文档 #${index + 1}</div>
+                                            <div class="bg-neutral-100 px-4 py-2 font-medium border-b border-neutral-200">
+                                                Doc #${index + 1}&nbsp;&nbsp;&nbsp;${doc.title}${doc.author ? `&nbsp;&nbsp;&nbsp;(Author: ${doc.author})` : ''}
+                                            </div>
                                             <div>
-                                                <pre class="whitespace-pre-wrap text-sm p-4 bg-white max-h-60 overflow-y-auto">${docContent}</pre>
+                                                <pre class="whitespace-pre-wrap text-sm p-4 bg-white max-h-60 overflow-y-auto">${doc.content}</pre>
                                             </div>
                                         </div>
                                     `;
@@ -485,33 +481,23 @@
                             submitBtn.disabled = false;
                             submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>';
                         }
-                    } catch (e) {
-                        console.error("解析事件数据出错:", e);
-                    }
-                };
-                
-                eventSource.onerror = function(error) {
-                    console.error("EventSource 错误:", error);
-                    
-                    // Add more detailed error handling
-                    if (!fullAnswer) {
-                        // No data received yet, show error message to user
-                        const errorMsg = "Connection error occurred. Please try again.";
-                        if (loadingMessage && loadingMessage.parentNode) {
-                            chatContainer.removeChild(loadingMessage);
-                        }
+                    } catch (error) {
+                        console.error("处理消息时出错:", error);
                         
-                        systemMessage.querySelector('.markdown-content').innerHTML = marked.parse(`**Error:** ${errorMsg}`);
-                        if (!systemMessage.parentNode) {
+                        // 显示错误信息
+                        if (systemMessage.parentNode) {
+                            systemMessage.querySelector('.markdown-content').innerHTML = marked.parse(`**错误:** 处理响应时出现问题`);
+                        } else {
+                            systemMessage.querySelector('.markdown-content').innerHTML = marked.parse(`**错误:** 处理响应时出现问题`);
                             chatContainer.appendChild(systemMessage);
                         }
+                        
+                        eventSource.close();
+                        
+                        // 恢复提交按钮
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>';
                     }
-                    
-                    eventSource.close();
-                    
-                    // Restore submit button
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>';
                 };
                 
                 eventSource.onopen = function() {
