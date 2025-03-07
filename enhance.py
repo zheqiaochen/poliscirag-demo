@@ -83,7 +83,7 @@ def enhance_answer(query: str, context: str):
         model="gpt-4o", 
         # model="qwen-plus",
         messages=[
-            {"role": "system", "content": "你是一个会根据已知文本进行总结的专家，给出简洁的回答。"},
+            {"role": "system", "content": "你是一个会根据已知文本进行总结的专家，给出简洁的回答，使用与问题相同的语言回答。"},
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
