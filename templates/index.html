@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>PoliSciRAG</title>
+    <title>PoliSci Chat</title>
     <!-- 添加favicon -->
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
@@ -136,14 +136,14 @@
     <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
       <div class="container mx-auto px-4 max-w-6xl">
         <div class="h-16 flex items-center justify-between">
-          <a class="text-neutral-800 font-semibold text-lg" href="/">PoliSciRAG</a>
+          <a class="text-neutral-800 font-semibold text-lg" href="/">PoliSci Chat</a>
         </div>
       </div>
     </nav>
 
     <div class="container mx-auto px-4 flex-grow flex flex-col max-w-6xl">
         <!-- 隐藏标题但保留元素，用于JS定位 -->
-        <h2 class="sr-only" id="page-title">PoliSciRAG Query</h2>
+        <h2 class="sr-only" id="page-title">PoliSci Chat</h2>
         
         <!-- 聊天内容区域 - 初始隐藏，有内容时显示 -->
         {% if query_answer %}
@@ -232,9 +232,9 @@
                             <div class="col-span-2">
                                 <label for="rerank_top_k" class="block text-sm font-medium text-neutral-700 mb-2 relative group">
                                     Top-K
-                                    <span class="hidden group-hover:block absolute left-0 top-full mt-1 bg-neutral-800 text-white text-xs rounded py-1 px-2 w-64 z-10">The higher this value, the more informative the answer. However, a very high value may make the answer confusing. 5 is suggested value.</span>
+                                    <span class="hidden group-hover:block absolute left-0 top-full mt-1 bg-neutral-800 text-white text-xs rounded py-1 px-2 w-64 z-10">The higher this value, the more informative the answer. However, a very high value may make the answer confusing. 10 is a good start.</span>
                                 </label>
-                                <input type="number" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="rerank_top_k" name="rerank_top_k" value="5" min="1" max="20" onchange="limitValue(this)">
+                                <input type="number" class="w-full px-3 py-3 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 h-[46px]" id="rerank_top_k" name="rerank_top_k" value="10" min="1" max="20" onchange="limitValue(this)">
                             </div>
                         </div>
                     </form>
@@ -305,7 +305,7 @@
 
     <footer class="mt-auto pt-4 border-t border-neutral-100">
         <div class="container mx-auto px-4 py-2">
-            <p class="text-center text-neutral-400 text-xs">© 2025 PoliSciRAG | All Rights Reserved</p>
+            <p class="text-center text-neutral-400 text-xs">© 2025 PoliSci Chat | All Rights Reserved</p>
         </div>
     </footer>
 
