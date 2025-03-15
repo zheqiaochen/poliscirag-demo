@@ -10,7 +10,7 @@ import json
 import sys
 import dotenv
 import voyageai
-import dashscope
+# import dashscope
 from qdrant_client import QdrantClient, models
 from openai import OpenAI
 
