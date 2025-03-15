@@ -9,8 +9,8 @@ import os
 import json
 import sys
 import dotenv
-import requests
 import voyageai
+import dashscope
 from qdrant_client import QdrantClient, models
 from openai import OpenAI
 
@@ -101,35 +101,6 @@ def search_qdrant_with_rerank(query: str, collection_name: str, top_k: int = 10,
             })
     return reranked_documents
 
-
-
-def jina_rerank(query: str, documents: list) -> list:
-    """
-    使用Jina重新排序文档。
-
-    Args:
-        query (str): 查询文本
-        documents (list): 文档文本列表
-
-    Returns:
-        list: 重新排序的文档
-    """
-    url = "https://api.jina.ai/v1/rerank"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": os.getenv("JINA_API_KEY")
-    }
-    data = {
-        "model": "jina-reranker-v2-base-multilingual",
-        "query": query,
-        "top_n": 5,
-        "documents": documents
-    }
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    response_json = response.json()
-    reranked = [result['document']['text'] for result in response_json.get('results', [])]
-    return reranked
-
 def voyage_rerank(query: str, documents: list, model: str = "rerank-2", top_k: int = 5) -> list:
     """
     使用VoyageAI服务重新排序文档。
@@ -161,6 +132,35 @@ def voyage_rerank(query: str, documents: list, model: str = "rerank-2", top_k: i
         top_k=min(top_k, len(valid_documents)),  # 确保top_k不超过文档数量
     )
     return result.results
+
+# def gte_rerank(query: str, documents: list, top_k: int = 5) -> list:
+#     """
+#     使用GTE重新排序文档。
+
+#     Args:
+#         query (str): 查询文本
+#         documents (list): 文档文本列表
+#         model (str, optional): 重新排序模型
+#         top_k (int, optional): 需要返回的重排序结果数量
+
+#     Returns:
+#         list: 重新排序的文档
+#     """
+#     # 检查文档列表是否为空
+#     if not documents:
+#         return []
+        
+#     # 过滤掉空字符串
+#     valid_documents = [doc for doc in documents if doc and isinstance(doc, str)]
+#     resp = dashscope.TextReRank.call(
+#         model=dashscope.TextReRank.Models.gte_rerank,
+#         query=query,
+#         documents=valid_documents,
+#         top_n=top_k,
+#         return_documents=True
+#     )
+
+#     return resp
 
 def get_collection_name():
     """

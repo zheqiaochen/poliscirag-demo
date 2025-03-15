@@ -24,8 +24,7 @@ import json
 # 导入 index.py 和 query.py 中的核心函数
 from query import search_qdrant_with_rerank, get_collection_name
 
-
-app = FastAPI(title="PoliSciRAG system interface", description="PoliSciRAG indexing and querying interface based on FastAPI", version="1.0")
+app = FastAPI(title="CommonTale system interface", description="CommonTale indexing and querying interface based on FastAPI", version="1.0")
 templates = Jinja2Templates(directory="templates")
 
 # 挂载静态文件目录
